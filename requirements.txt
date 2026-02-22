@@ -1,10 +1,76 @@
-# Core Dependencies
-jax>=0.4.25
-jaxlib>=0.4.25
-flax>=0.8.0
-optax>=0.1.9
-numpy>=1.26.0
-datasets>=2.18.0
-transformers>=4.37.0
-matplotlib>=3.8.0
-tqdm>=4.66.0
+# ============================================================================
+# Tustin-Mamba for HG38 Genomics - Python Dependencies
+# ============================================================================
+#
+# Installation:
+#   pip install -r requirements.txt
+#
+# For GPU support with CUDA, install JAX with CUDA support:
+#   pip install --upgrade "jax[cuda12]"  # For CUDA 12.x
+#   pip install --upgrade "jax[cuda11]"  # For CUDA 11.x
+#
+# Or use the pip wheels:
+#   pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+#
+# ============================================================================
+
+# ============================================================================
+# Core JAX Stack
+# ============================================================================
+jax>=0.4.25                    # JAX core: JIT, autodiff, functional arrays
+jaxlib>=0.4.25                 # JAX backend (CPU by default)
+flax>=0.8.0                    # Neural networks (Linen modules, train_state)
+optax>=0.1.9                   # Optimizers (AdamW, gradient clipping, schedules)
+
+# ============================================================================
+# Core Scientific Computing
+# ============================================================================
+numpy>=1.26.0                  # Numerical arrays (JAX backend)
+scipy>=1.11.0                  # Scientific computing utilities
+
+# ============================================================================
+# Genomics Data Processing (CRITICAL)
+# ============================================================================
+pyfaidx>=0.7.2.1               # FASTA file parsing (hg38 reference genome)
+pandas>=2.0.0                  # BED file handling, metrics CSV
+
+# ============================================================================
+# HuggingFace Ecosystem (Pre-trained Models)
+# ============================================================================
+transformers>=4.37.0           # HyenaDNA model loading
+datasets>=2.18.0               # Dataset utilities (optional)
+huggingface-hub>=0.20.0        # Model downloading and caching
+tokenizers>=0.15.0             # Fast tokenization (HF models)
+safetensors>=0.4.0             # Safe tensor serialization
+accelerate>=0.26.0             # Training utilities (mixed precision, etc.)
+
+# ============================================================================
+# Visualization & Progress Tracking
+# ============================================================================
+matplotlib>=3.8.0              # Plotting (training curves, metrics)
+seaborn>=0.13.0                # Statistical plots
+tqdm>=4.66.0                   # Progress bars (training loop)
+
+# ============================================================================
+# Utilities
+# ============================================================================
+pyyaml>=6.0                    # YAML config parsing
+requests>=2.31.0               # HTTP requests (dataset downloads)
+typing-extensions>=4.9.0       # Type hints
+
+# ============================================================================
+# Optional but Recommended
+# ============================================================================
+# psutil>=5.9.0                # System monitoring (CPU, memory, GPU)
+# tensorboard>=2.15.0          # Advanced logging and visualization
+# wandb>=0.16.0                # Weights & Biases experiment tracking
+# jupyter>=1.0.0               # Jupyter notebooks for interactive work
+
+# ============================================================================
+# Development Tools (Optional)
+# ============================================================================
+# pytest>=7.4.0                # Testing framework
+# pytest-cov>=4.1.0            # Code coverage
+# black>=23.0.0                # Code formatting
+# pylint>=2.17.0               # Code linting
+# mypy>=1.5.0                  # Static type checking

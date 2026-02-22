@@ -1,0 +1,154 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    HYENADNA → TUSTIN MAMBA TRAINING                      ║
+║                           QUICK START GUIDE                              ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 🚀 START TRAINING (ONE COMMAND)                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  bash START_TRAINING.sh
+
+  ✓ Auto-downloads HG38 dataset (~3.1 GB) if missing
+  ✓ Auto-downloads HyenaDNA-medium weights
+  ✓ Initializes Tustin Mamba blocks
+  ✓ Trains with 2-phase fine-tuning
+  ✓ Saves checkpoints every 200 steps
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 📋 TRAINING MODES                                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Quick Test (Recommended First):
+    bash START_TRAINING.sh quick
+    → Small model, 1000 steps, ~10 minutes
+
+  Full Tustin Training:
+    bash START_TRAINING.sh tustin
+    → 512d, 6 layers, 100K steps, several hours
+
+  Custom Hyperparameters:
+    bash START_TRAINING.sh custom
+    → Edit top of train_hyena.py first
+
+  Resume Training:
+    bash START_TRAINING.sh resume
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 🔍 WHAT HAPPENS AUTOMATICALLY                                            │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  1. Downloads HG38 dataset to ./data/hg38/
+     - hg38.ml.fa (3.1 GB human genome)
+     - human-sequences.bed (35 MB intervals)
+
+  2. Downloads HyenaDNA-medium weights from HuggingFace
+     - Pretrained embeddings
+     - Layer norms
+
+  3. Creates hybrid model:
+     HyenaDNA Embeddings (pretrained)
+          ↓
+     Tustin Mamba Block 1 (your implementation)
+     Tustin Mamba Block 2
+          ...
+     Tustin Mamba Block N
+          ↓
+     Output Layer
+
+  4. Two-phase training:
+     Phase 1 (20%): Freeze embeddings, train Mamba
+     Phase 2 (80%): Full fine-tuning
+
+  5. Saves checkpoints every 200 steps to:
+     ./checkpoints/hyena_mamba_[config]/
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 🧪 TESTING                                                               │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Test dataset download:
+    python test_dataset_download.py
+
+  Test training (quick):
+    bash START_TRAINING.sh quick
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 📂 KEY FILES                                                             │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  START_TRAINING.sh              → One-command launcher
+  train_with_auto_download.py    → Training with auto-setup
+  download_hg38.py                → Dataset downloader
+  hyena_data_hg38.py              → Data loader (auto-downloads)
+  train_hyena.py                  → Main training script
+
+  SETUP_COMPLETE.md               → Full setup documentation
+  TRAINING_GUIDE.md               → Comprehensive training guide
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 🎯 ARCHITECTURE                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  HyenaDNA-Medium (Pretrained):
+    - Vocab: 12 (DNA: A, C, G, T, N, + special)
+    - Hidden: 256
+    - Sequence: up to 160K
+
+  Your Tustin Mamba:
+    - Hidden: 512 (configurable)
+    - Layers: 6 (configurable)
+    - Mode: "tustin" (your discretization)
+
+  What's Loaded:
+    ✓ Token embeddings (pretrained)
+    ✓ Layer norms (pretrained)
+
+  What's Replaced:
+    ✗ Hyena blocks → ✓ Tustin Mamba blocks
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 📊 MONITORING                                                            │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Real-time progress:
+    → Printed in terminal during training
+
+  Metrics:
+    → ./checkpoints/hyena_mamba_[config]/metrics.csv
+
+  Checkpoints:
+    → ./checkpoints/hyena_mamba_[config]/checkpoint_*.pkl
+
+  View metrics:
+    tail -f ./checkpoints/hyena_mamba_tustin/metrics.csv
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 🛠️ TROUBLESHOOTING                                                      │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Dataset download fails:
+    python download_hg38.py --force
+
+  Out of memory:
+    Edit train_hyena.py → Reduce BATCH_SIZE or SEQ_LEN
+
+  JAX doesn't detect GPU:
+    pip install --upgrade "jax[cuda12]"
+
+  Missing dependencies:
+    pip install jax flax optax transformers pyfaidx pandas tqdm
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ✅ READY TO TRAIN!                                                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Just run:
+    bash START_TRAINING.sh
+
+  Or read full guide:
+    cat SETUP_COMPLETE.md
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                          Happy Training! 🚀                              ║
+╚══════════════════════════════════════════════════════════════════════════╝

@@ -21,7 +21,7 @@ echo -e "==========================================${NC}"
 echo ""
 
 # Validate experiment type
-if [[ ! "$EXPERIMENT" =~ ^(quick|tustin|zoh|large|compare)$ ]]; then
+if [[ ! "$EXPERIMENT" =~ ^(quick|tustin|zoh|large|custom|compare)$ ]]; then
     echo -e "${RED}Invalid experiment: $EXPERIMENT${NC}"
     echo ""
     echo "Usage: bash run_experiment.sh [EXPERIMENT] [--resume]"
@@ -31,11 +31,13 @@ if [[ ! "$EXPERIMENT" =~ ^(quick|tustin|zoh|large|compare)$ ]]; then
     echo "  tustin   - Full Tustin training (3-4 hours)"
     echo "  zoh      - Full ZOH training (3-4 hours)"
     echo "  large    - Large-scale training (8-12 hours)"
+    echo "  custom   - Use hyperparameters from top of train_hyena.py"
     echo "  compare  - Compare Tustin vs ZOH results"
     echo ""
     echo "Examples:"
     echo "  bash run_experiment.sh quick"
     echo "  bash run_experiment.sh tustin"
+    echo "  bash run_experiment.sh custom"
     echo "  bash run_experiment.sh tustin --resume"
     echo "  bash run_experiment.sh compare"
     exit 1
@@ -141,6 +143,11 @@ case $EXPERIMENT in
         echo "  - Steps: 200,000"
         echo "  - Expected time: ~8-12 hours"
         echo "  - Memory: ~30GB"
+        ;;
+    custom)
+        echo "  - Using hyperparameters from train_hyena.py"
+        echo "  - Edit the top of train_hyena.py to customize"
+        echo "  - Check terminal output for actual config"
         ;;
 esac
 echo ""

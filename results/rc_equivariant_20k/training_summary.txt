@@ -1,0 +1,10 @@
+RC-Equivariant Tustin-Mamba Training Summary
+==================================================
+
+Model: 128d × 6 layers
+Mode: tustin
+Steps: 20000
+RC Augmentation: random
+RC Loss Weight: 0.1
+Training Time: 5.29 hours
+Parameters: 728,972

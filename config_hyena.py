@@ -48,9 +48,9 @@ class HyenaFineTuneConfig:
     gradient_accumulation_steps: int = 1
 
     # Evaluation & Checkpointing
-    eval_interval: int = 500
+    eval_interval: int = 200  # Evaluate every 200 steps
     eval_iters: int = 20
-    save_interval: int = 2000
+    save_interval: int = 200  # Save checkpoint every 200 steps
     log_interval: int = 100
 
     # Data Loading
@@ -103,7 +103,7 @@ QUICK_CONFIG = HyenaFineTuneConfig(
     phase1_steps=200,
     phase2_steps=800,
     eval_interval=100,
-    save_interval=500,
+    save_interval=200,  # Save every 200 steps
     max_tokens=1_000_000,  # 1M tokens for quick test
     checkpoint_dir="./checkpoints/hyena_mamba_quick",
     results_dir="./results/quick_test"

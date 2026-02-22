@@ -1,0 +1,2 @@
+Training converted to PyTorch for RTX 5090 GPU support
+GPU: NVIDIA GeForce RTX 5090

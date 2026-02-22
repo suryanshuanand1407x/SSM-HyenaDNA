@@ -20,6 +20,7 @@ def save_checkpoint(
     step: int,
     checkpoint_dir: str,
     config: Any = None,
+    metrics: Optional[Dict[str, float]] = None,
     keep_last_n: int = 3
 ):
     """
@@ -30,6 +31,7 @@ def save_checkpoint(
         step: Current training step
         checkpoint_dir: Directory to save checkpoint
         config: Configuration object (for reproducibility)
+        metrics: Optional dict with train_loss, train_acc, val_loss, val_acc
         keep_last_n: Keep only last N checkpoints to save disk space
     """
     # Create checkpoint directory
@@ -46,6 +48,7 @@ def save_checkpoint(
         'params': state.params,
         'opt_state': state.opt_state,
         'config': config,
+        'metrics': metrics or {},
     }
 
     # Write to temporary file first (atomic write)
@@ -56,7 +59,15 @@ def save_checkpoint(
         # Atomic rename
         shutil.move(temp_path, checkpoint_path)
 
-        print(f"✓ Checkpoint saved: {checkpoint_path}")
+        # Print checkpoint info with metrics
+        if metrics:
+            print(f"✓ Checkpoint saved: {checkpoint_path}")
+            print(f"  Metrics: train_loss={metrics.get('train_loss', 'N/A'):.4f}, "
+                  f"train_acc={metrics.get('train_acc', 'N/A'):.4f}, "
+                  f"val_loss={metrics.get('val_loss', 'N/A'):.4f}, "
+                  f"val_acc={metrics.get('val_acc', 'N/A'):.4f}")
+        else:
+            print(f"✓ Checkpoint saved: {checkpoint_path}")
 
         # Clean up old checkpoints
         cleanup_old_checkpoints(checkpoint_dir, keep_last_n)
@@ -240,3 +251,47 @@ def load_phase_markers(checkpoint_dir: str) -> Dict[str, int]:
                 phases[phase_name] = step
 
     return phases
+
+
+def save_metrics_to_csv(
+    checkpoint_dir: str,
+    step: int,
+    metrics: Dict[str, float],
+    create_header: bool = False
+):
+    """
+    Save metrics to CSV file for easy tracking and plotting.
+
+    Args:
+        checkpoint_dir: Directory to save metrics CSV
+        step: Current training step
+        metrics: Dictionary with train_loss, train_acc, val_loss, val_acc
+        create_header: Whether to create CSV header (first write)
+    """
+    import csv
+
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    metrics_csv = os.path.join(checkpoint_dir, "training_metrics.csv")
+
+    # Check if file exists to determine if we need header
+    file_exists = os.path.exists(metrics_csv)
+
+    try:
+        with open(metrics_csv, 'a', newline='') as f:
+            writer = csv.writer(f)
+
+            # Write header if file is new
+            if not file_exists or create_header:
+                writer.writerow(['step', 'train_loss', 'train_acc', 'val_loss', 'val_acc'])
+
+            # Write metrics
+            writer.writerow([
+                step,
+                metrics.get('train_loss', ''),
+                metrics.get('train_acc', ''),
+                metrics.get('val_loss', ''),
+                metrics.get('val_acc', '')
+            ])
+
+    except Exception as e:
+        print(f"Warning: Could not save metrics to CSV: {e}")

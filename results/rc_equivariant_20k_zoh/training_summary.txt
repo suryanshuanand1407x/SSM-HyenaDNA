@@ -1,0 +1,10 @@
+RC-Equivariant ZOH-Mamba Training Summary
+==================================================
+
+Model: 128d × 6 layers
+Mode: zoh
+Steps: 20000
+RC Augmentation: random
+RC Loss Weight: 0.1
+Training Time: 5.18 hours
+Parameters: 727,436

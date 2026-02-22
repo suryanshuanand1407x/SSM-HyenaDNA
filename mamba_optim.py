@@ -352,9 +352,9 @@ def estimate_loss_async(
 
 def warmup_jit_compilation(
     state: OptimizedTrainState,
-    loader,  # MQARLoader instance
+    loader,  # Data loader instance
     verbose: bool = True,
-) -> None:
+) -> OptimizedTrainState:
     """
     Pre-compile JIT functions with warmup batches.
 
@@ -394,6 +394,8 @@ def warmup_jit_compilation(
     if verbose:
         print("=" * 60)
         print("Warmup complete. Main training loop will be fast.\n")
+
+    return state
 
 
 # =============================================================================

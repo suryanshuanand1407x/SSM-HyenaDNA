@@ -1,0 +1,162 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║              STABLE 20K STEP TRAINING - QUICK START                      ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+🎯 GOAL: Train for 20,000 steps with full metrics (no NaN issues)
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 🚀 START TRAINING (ONE COMMAND)                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  python train_20k_stable.py
+
+  ✓ Conservative hyperparameters (prevents NaN)
+  ✓ Full metrics tracking (train/val loss & accuracy)
+  ✓ Checkpoints every 500 steps
+  ✓ NaN detection and error handling
+  ✓ Auto-downloads HG38 dataset & HyenaDNA weights
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 📊 WHAT YOU'LL SEE                                                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Training: 45%|██████████▌         | 9000/20000 [45:23<50:32, loss: 0.8234]
+
+  ══════════════════════════════════════════════════════════════════════════
+  Evaluation - Step 9000
+  ══════════════════════════════════════════════════════════════════════════
+  Metric               Train           Validation
+  ──────────────────────────────────────────────────────────────────────────
+  Loss                 0.823456        0.856234
+  Accuracy             0.7234          0.7123
+  ══════════════════════════════════════════════════════════════════════════
+
+  ✓ Checkpoint saved
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 📈 VIEW METRICS (ANYTIME)                                                │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  python view_metrics.py
+
+  Shows:
+  - Latest metrics (most recent checkpoint)
+  - Best metrics (lowest loss, highest accuracy)
+  - Full training history table
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ⚙️ CONFIGURATION                                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Model:           256d × 4 layers (Tustin Mamba)
+  Learning Rate:   5e-5 (conservative, prevents NaN)
+  Gradient Clip:   0.5 (aggressive, prevents NaN)
+  Batch Size:      16
+  Sequence Length: 1024
+  Total Steps:     20,000
+  Evaluation:      Every 500 steps
+  Checkpoints:     Every 500 steps (keep last 10)
+
+  Why conservative?
+  - Prevents NaN/Inf issues
+  - Stable gradient flow
+  - Reliable convergence
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 💾 WHERE FILES ARE SAVED                                                 │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Checkpoints:  ./checkpoints/stable_20k/
+  ├── metrics.csv                 # All metrics (train/val loss & acc)
+  ├── checkpoint_000500.pkl       # Every 500 steps
+  ├── checkpoint_001000.pkl
+  ...
+  └── checkpoint_020000.pkl       # Final checkpoint
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ⏱️ EXPECTED TIME                                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  GPU (RTX 5090/4090): 2-4 hours
+  CPU (not recommended): 24-48 hours
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 📊 EXPECTED RESULTS                                                      │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Initial (Step 0):
+    Train Loss: ~2.5    Train Acc: ~0.25 (random)
+    Val Loss:   ~2.5    Val Acc:   ~0.25 (random)
+
+  Mid-training (Step 10,000):
+    Train Loss: ~0.8    Train Acc: ~0.68
+    Val Loss:   ~0.9    Val Acc:   ~0.65
+
+  Final (Step 20,000):
+    Train Loss: ~0.4-0.6    Train Acc: ~0.75-0.85
+    Val Loss:   ~0.5-0.7    Val Acc:   ~0.73-0.83
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 🛡️ NaN PREVENTION                                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Built-in protections:
+  ✓ Conservative learning rate (5e-5)
+  ✓ Aggressive gradient clipping (0.5)
+  ✓ NaN detection every step
+  ✓ Emergency checkpoint if NaN detected
+  ✓ Stable initialization
+
+  If NaN still occurs:
+  - Script will save emergency checkpoint
+  - Shows exact step where NaN occurred
+  - Provides debugging information
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 🔧 TROUBLESHOOTING                                                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  NaN Loss:
+    → Lower learning rate to 1e-5
+    → Increase gradient clipping to 0.3
+    → Reduce batch size to 8
+
+  Out of Memory:
+    → Reduce batch_size to 8
+    → Reduce seq_len to 512
+
+  Slow Training:
+    → Use GPU instead of CPU
+    → Increase batch size (if memory allows)
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 📚 DOCUMENTATION                                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Full Guide: RUN_20K_TRAINING.md
+
+  Quick Reference:
+  - Start training:  python train_20k_stable.py
+  - View metrics:    python view_metrics.py
+  - Check files:     ls -lh ./checkpoints/stable_20k/
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ✅ READY TO START                                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Just run:
+
+    python train_20k_stable.py
+
+  And watch the metrics! Training will show:
+  - Real-time loss in progress bar
+  - Full metrics table every 500 steps
+  - Checkpoints saved automatically
+
+  View saved metrics anytime:
+
+    python view_metrics.py
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    Happy Training! 🚀                                    ║
+╚══════════════════════════════════════════════════════════════════════════╝

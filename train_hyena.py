@@ -5,6 +5,63 @@ Two-phase fine-tuning: Phase 1 (freeze embeddings) → Phase 2 (full fine-tuning
 Comparison study: Tustin vs ZOH Mamba blocks
 """
 
+# ==============================================================================
+# HYPERPARAMETERS - EDIT HERE FOR QUICK TWEAKS
+# ==============================================================================
+
+# Model Architecture
+MODEL_D_MODEL = 512              # Hidden dimension (128, 256, 512, 1024)
+MODEL_N_LAYERS = 6               # Number of Mamba blocks (2, 4, 6, 8, 12)
+MODEL_D_STATE = 16               # SSM state dimension (16, 32, 64)
+MODEL_D_CONV = 4                 # Convolution width (4, 8)
+MODEL_EXPAND = 2                 # Expansion factor (2, 4)
+MODEL_MODE = "tustin"            # Discretization: "tustin" or "zoh"
+
+# Training Strategy
+LEARNING_RATE = 1e-4             # Learning rate (1e-5 to 1e-3)
+BATCH_SIZE = 32                  # Batch size (8, 16, 32, 64)
+SEQ_LEN = 4096                   # Sequence length (1024, 2048, 4096, 8192)
+MAX_STEPS = 20000               # Total training steps
+WARMUP_STEPS = 2000              # LR warmup steps
+
+# Two-Phase Training
+PHASE1_STEPS = 20000             # Phase 1 (freeze embeddings) - 20% of training
+PHASE2_STEPS = 80000             # Phase 2 (full fine-tuning) - 80% of training
+FREEZE_EMBEDDINGS_PHASE1 = True  # Whether to freeze embeddings in Phase 1
+
+# Optimization
+USE_BFLOAT16 = True              # Use bfloat16 (Tensor Cores) - recommended for RTX 5090
+GRADIENT_CLIP_NORM = 1.0         # Gradient clipping (0.5 to 2.0)
+WEIGHT_DECAY = 0.1               # AdamW weight decay (0.0 to 0.2)
+GRADIENT_ACCUMULATION = 1        # Gradient accumulation steps (1, 2, 4)
+
+# Evaluation & Checkpointing
+EVAL_INTERVAL = 200              # Steps between evaluations (same as save interval for metrics)
+EVAL_ITERS = 20                  # Number of batches for evaluation
+SAVE_INTERVAL = 200              # Steps between checkpoints (SAVE EVERY 200 STEPS)
+LOG_INTERVAL = 100               # Steps between log updates
+
+# Data Loading (Multi-core)
+NUM_WORKERS = 4                  # CPU workers for data loading (2, 4, 6, 8)
+PREFETCH_BATCHES = 2             # Batches to prefetch (1, 2, 4)
+ENABLE_PREFETCH = True           # Enable multi-core prefetching
+
+# Pre-trained Model
+PRETRAINED_MODEL = "LongSafari/hyenadna-medium-160k-seqlen"
+LOAD_EMBEDDINGS = True           # Load pre-trained embeddings
+LOAD_LAYER_NORMS = True          # Load pre-trained layer norms
+
+# Dataset
+MAX_TOKENS = 100_000_000         # Maximum training tokens (for medium-scale study)
+
+# Directories (auto-created)
+CHECKPOINT_DIR = "./checkpoints/hyena_mamba_custom"
+RESULTS_DIR = "./results/custom_training"
+
+# ==============================================================================
+# END HYPERPARAMETERS
+# ==============================================================================
+
 import os
 import argparse
 import time
@@ -20,7 +77,7 @@ from config_hyena import (
     ZOH_CONFIG,
     QUICK_CONFIG
 )
-from hyena_data import HyenaDNALoader
+from hyena_data_hg38 import HG38DataLoader
 from model_hybrid import create_hybrid_model, freeze_embeddings, count_parameters
 from checkpoint_utils import (
     save_checkpoint,
@@ -38,6 +95,62 @@ from mamba_optim import (
 )
 from mamba_metrics import compute_all_metrics
 from mamba_viz import generate_performance_report
+
+
+def create_config_from_hyperparameters() -> HyenaFineTuneConfig:
+    """
+    Create configuration from hyperparameters defined at top of file.
+
+    This allows easy tweaking without editing config_hyena.py.
+    """
+    return HyenaFineTuneConfig(
+        # Model Architecture
+        vocab_size=12,  # HyenaDNA standard
+        d_model=MODEL_D_MODEL,
+        n_layers=MODEL_N_LAYERS,
+        d_state=MODEL_D_STATE,
+        d_conv=MODEL_D_CONV,
+        expand=MODEL_EXPAND,
+        mode=MODEL_MODE,
+
+        # Pre-trained Model
+        pretrained_model=PRETRAINED_MODEL,
+        load_embeddings=LOAD_EMBEDDINGS,
+        load_layer_norms=LOAD_LAYER_NORMS,
+
+        # Training Strategy
+        learning_rate=LEARNING_RATE,
+        batch_size=BATCH_SIZE,
+        seq_len=SEQ_LEN,
+        max_steps=MAX_STEPS,
+        warmup_steps=WARMUP_STEPS,
+
+        # Two-Phase Training
+        phase1_steps=PHASE1_STEPS,
+        phase2_steps=PHASE2_STEPS,
+        freeze_embeddings_phase1=FREEZE_EMBEDDINGS_PHASE1,
+
+        # Optimization
+        use_bfloat16=USE_BFLOAT16,
+        gradient_clip_norm=GRADIENT_CLIP_NORM,
+        weight_decay=WEIGHT_DECAY,
+        gradient_accumulation_steps=GRADIENT_ACCUMULATION,
+
+        # Evaluation & Checkpointing
+        eval_interval=EVAL_INTERVAL,
+        eval_iters=EVAL_ITERS,
+        save_interval=SAVE_INTERVAL,
+        log_interval=LOG_INTERVAL,
+
+        # Data Loading
+        num_workers=NUM_WORKERS,
+        prefetch_batches=PREFETCH_BATCHES,
+        max_tokens=MAX_TOKENS,
+
+        # Directories
+        checkpoint_dir=CHECKPOINT_DIR,
+        results_dir=RESULTS_DIR,
+    )
 
 
 def create_masked_optimizer(learning_rate: float, freeze_mask: dict):
@@ -111,7 +224,8 @@ def create_train_state_with_pretrained(
         step=0,
         params=params,
         opt_state=opt_state,
-        tx=tx
+        tx=tx,
+        apply_fn=model.apply
     )
 
     return state, model, pretrained_weights
@@ -119,7 +233,7 @@ def create_train_state_with_pretrained(
 
 def train_phase(
     state: OptimizedTrainState,
-    loader: HyenaDNALoader,
+    loader: HG38DataLoader,
     config: HyenaFineTuneConfig,
     phase_name: str,
     start_step: int,
@@ -180,14 +294,37 @@ def train_phase(
             print(f"Val Loss:   {val_loss:.4f}")
             print()
 
-        # Periodic checkpointing
+        # Periodic checkpointing (with metrics)
         if (step + 1) % config.save_interval == 0:
+            # Compute metrics for checkpoint
+            print(f"\n--- Computing metrics for checkpoint at step {step + 1} ---")
+            checkpoint_metrics = estimate_loss_async(
+                state,
+                loader,
+                eval_iters=config.eval_iters
+            )
+
+            # Convert to regular Python floats
+            metrics_dict = {
+                'train_loss': float(checkpoint_metrics['train_loss']),
+                'train_acc': float(checkpoint_metrics.get('train_acc', 0.0)),
+                'val_loss': float(checkpoint_metrics['val_loss']),
+                'val_acc': float(checkpoint_metrics.get('val_acc', 0.0))
+            }
+
+            # Save checkpoint with metrics (keep last 20 checkpoints = 4000 steps of history)
             save_checkpoint(
                 state,
                 step + 1,
                 checkpoint_dir,
-                config=config
+                config=config,
+                metrics=metrics_dict,
+                keep_last_n=20  # Keep more checkpoints since we save more frequently
             )
+
+            # Also save metrics to CSV for easy tracking
+            from checkpoint_utils import save_metrics_to_csv
+            save_metrics_to_csv(checkpoint_dir, step + 1, metrics_dict)
 
     return state
 
@@ -199,8 +336,8 @@ def main():
         '--config',
         type=str,
         default='quick',
-        choices=['quick', 'tustin', 'zoh'],
-        help='Configuration preset'
+        choices=['quick', 'tustin', 'zoh', 'custom'],
+        help='Configuration preset (use "custom" to use hyperparameters from top of file)'
     )
     parser.add_argument(
         '--resume',
@@ -216,7 +353,12 @@ def main():
     args = parser.parse_args()
 
     # Load configuration
-    if args.config == 'quick':
+    if args.config == 'custom':
+        print("\n" + "=" * 60)
+        print("Using CUSTOM hyperparameters from top of train_hyena.py")
+        print("=" * 60)
+        config = create_config_from_hyperparameters()
+    elif args.config == 'quick':
         config = QUICK_CONFIG
     elif args.config == 'tustin':
         config = TUSTIN_CONFIG
@@ -233,9 +375,11 @@ def main():
     print(f"Model: {config.d_model}d × {config.n_layers} layers")
     print(f"Sequence Length: {config.seq_len}")
     print(f"Batch Size: {config.batch_size}")
+    print(f"Learning Rate: {config.learning_rate}")
     print(f"Total Steps: {config.max_steps}")
-    print(f"Phase 1 Steps: {config.phase1_steps} (freeze embeddings)")
+    print(f"Phase 1 Steps: {config.phase1_steps} (freeze embeddings: {config.freeze_embeddings_phase1})")
     print(f"Phase 2 Steps: {config.phase2_steps} (full fine-tuning)")
+    print(f"Data Workers: {config.num_workers} (prefetch: {config.prefetch_batches} batches)")
     print(f"Checkpoint Dir: {config.checkpoint_dir}")
     print()
 
@@ -243,14 +387,24 @@ def main():
     os.makedirs(config.checkpoint_dir, exist_ok=True)
     os.makedirs(config.results_dir, exist_ok=True)
 
-    # Initialize JAX
+    # Initialize JAX with GPU/CPU auto-detection
     print("Initializing JAX...")
-    print(f"JAX devices: {jax.devices()}")
+    try:
+        devices = jax.devices()
+        print(f"JAX devices: {devices}")
+        if devices[0].platform == 'gpu':
+            print(f"✓ Running on GPU: {devices[0].device_kind}")
+        else:
+            print("✓ Running on CPU (GPU not available or cuDNN issue)")
+    except Exception as e:
+        print(f"Device detection warning: {e}")
+        print("Continuing with default device...")
+
     rng = jax.random.PRNGKey(42)
 
-    # Initialize data loader
-    print("\nInitializing data loader...")
-    loader = HyenaDNALoader(config)
+    # Initialize data loader (HG38 real genomic data)
+    print("\nInitializing HG38 data loader (real genomic data)...")
+    loader = HG38DataLoader(config)
 
     # Check for existing checkpoints
     current_step = 0
