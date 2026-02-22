@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:arxiv.org)",
+      "Bash(find:*)",
+      "Bash(python:*)",
+      "Bash(chmod:*)"
+    ]
+  }
+}
